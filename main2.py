@@ -101,6 +101,7 @@ class MainWindow(QMainWindow):
         clockwise = motor_spec["direction"]
         if reverse:
             clockwise = not clockwise
+        duration = motor_spec["time"] * nsteps / nn * motor_spec["freq"] / freq
         motor.drive(duration, freq=freq, dc=dc, clockwise=clockwise)
 
     def reset(self):
