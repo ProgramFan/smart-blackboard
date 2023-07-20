@@ -1,0 +1,12 @@
+{
+  "motor_x": {
+    "direction": true,
+    "freq": 500,
+    "time": 12.59495687800063
+  },
+  "motor_y": {
+    "direction": false,
+    "freq": 500,
+    "time": 11.36609055000008
+  }
+}

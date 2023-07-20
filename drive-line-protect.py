@@ -2,12 +2,16 @@
 
 import time
 import RPi.GPIO as GPIO
+import logging
+logging.basicConfig(level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] -- %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
 
 class GpioManager(object):
     def __enter__(self):
         GPIO.setmode(GPIO.BCM)
         return self
-    def __exit__(exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         GPIO.cleanup()
         return False
 
@@ -33,6 +37,7 @@ class BoundedStepperMotor(object):
         p = GPIO.PWM(self.pins[2], real_freq)
         def stop_pwm(chan):
             p.stop()
+            logging.info(f"Collision detected through pin {chan}, PWM stopped.")
         GPIO.add_event_detect(self.bounds[0], GPIO.RISING, callback=stop_pwm,
                               bouncetime=200)
         GPIO.add_event_detect(self.bounds[1], GPIO.RISING, callback=stop_pwm,
@@ -63,18 +68,19 @@ def main():
      }
     }
     #motorx = StepperMotor(conf["motorx"]["EN"], conf["motorx"]["DIR"], conf["motorx"]["STP"])
-    motor_x = StepperMotor(4, 2, 3)
-    motor_y = StepperMotor(11, 10, 9)
-    for _ in range(3):
-        motor_x.forward(1)
-        motor_y.backward(1)
-        motor_x.backward(1)
-        motor_y.forward(1)
+    with GpioManager() as _:
+        motor_x = BoundedStepperMotor(4, 2, 3, 6, 7)
+        motor_x.forward(20)
+    #motor_y = BoundedStepperMotor(11, 10, 9)
+    #for _ in range(3):
+    #    motor_x.forward(1)
+    #    motor_y.backward(1)
+    #    motor_x.backward(1)
+    #    motor_y.forward(1)
     #motor_y.forward(1)
     #motor_x.forward(1)
     #motor_x.backward(1)
     #motor_y = StepperMotor(conf["motory"]["EN"], conf["motory"]["DIR"], conf["motory"]["STP"])
-    GPIO.cleanup()
 
 if __name__ == "__main__":
     main()
