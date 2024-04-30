@@ -7,12 +7,13 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QStyle
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize
-import RPi.GPIO as GPIO
+from RPi import GPIO
 from driver import BoundedStepperMotor
 
 import sys
 import os
 import json
+
 
 class MainWindow(QMainWindow):
 
@@ -64,7 +65,7 @@ class MainWindow(QMainWindow):
 
         positions = [(i, j) for i in range(3) for j in range(3)]
 
-        for position, button in zip(positions, buttons):                             
+        for position, button in zip(positions, buttons):
             if button is not None:
                 layout.addWidget(button, *position)
 
@@ -143,6 +144,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow(os.path.join(SCRIPT_DIR, "motor_spec.json"))
     window.show()
-    ret_code = app.exec_();
+    ret_code = app.exec_()
     GPIO.cleanup()
     sys.exit(ret_code)
