@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QStyle
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize
 import RPi.GPIO as GPIO
-from driver import StepperMotor
+from driver import BoundedStepperMotor
 
 import sys
 import os
@@ -84,12 +84,12 @@ class MainWindow(QMainWindow):
         with open(motor_spec, encoding="utf8") as f:
             self.motor_spec = json.load(f)
 
-        self.motor_x = StepperMotor(5, 3, 4);
+        self.motor_x = BoundedStepperMotor(5, 3, 4, 6, 7)
         self.motor_x_spec = self.motor_spec["motor_x"]
-        self.motor_y = StepperMotor(8, 6, 7);
+        self.motor_y = BoundedStepperMotor(12, 10, 11, 8, 9)
         self.motor_y_spec = self.motor_spec["motor_y"]
-        self.nx = 12;
-        self.ny = 5;
+        self.nx = 12
+        self.ny = 5
         self.reset()
 
     def go(self, direction, nsteps, reverse=False, speed=1):
@@ -98,7 +98,7 @@ class MainWindow(QMainWindow):
         nn = self.nx if direction == "x" else self.ny
         freq = 1000 * speed
         dc = 0.5
-        clockwise = motor_spec["direction"]
+        clockwise = motor_spec["clockwise"]
         if reverse:
             clockwise = not clockwise
         duration = motor_spec["time"] * nsteps / nn * motor_spec["freq"] / freq
