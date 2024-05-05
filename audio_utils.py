@@ -8,6 +8,7 @@ import numpy as np
 import scipy
 import os
 import re
+import tensorflow as tf
 
 VOICE_SAMPLERATE = 48000
 
@@ -57,10 +58,29 @@ def save_voice(data, fn):
     scipy.io.wavfile.write(fn, VOICE_SAMPLERATE, np.int16(data * 32767))
 
 
-def extract_voice_features(audio_array):
+def extract_voice_features(audio, method="mfcc"):
+    if method == "mfcc":
+        return make_mfcc(audio)
+    elif method == "spectrogram":
+        return make_spectrogram(audio)
+
+
+def make_mfcc(audio_array):
     mfcc = librosa.feature.mfcc(y=audio_array, sr=VOICE_SAMPLERATE, n_mfcc=20)
     mfcc = np.expand_dims(mfcc.T, axis=-1)
     return mfcc
+
+
+def make_spectrogram(audio_array):
+    # Convert the waveform to a spectrogram via a STFT.
+    spectrogram = tf.signal.stft(audio_array, frame_length=255, frame_step=128)
+    # Obtain the magnitude of the STFT.
+    spectrogram = tf.abs(spectrogram)
+    # Add a `channels` dimension, so that the spectrogram can be used
+    # as image-like input data with convolution layers (which expect
+    # shape (`batch_size`, `height`, `width`, `channels`).
+    spectrogram = spectrogram[..., tf.newaxis]
+    return spectrogram
 
 
 def draw_spectrogram(ax, data, samplerate, title=True, xlabel=True):
