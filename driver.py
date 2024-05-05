@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Driver for stepper motors"""
 
 import time
 from RPi import GPIO
@@ -21,6 +22,7 @@ class GpioManager(object):
 
 
 class StepperMotor(object):
+    """A simple stepper motor with 3 control signals."""
 
     def __init__(self, pin_en, pin_dir, pin_stp):
         self.pins = [pin_en, pin_dir, pin_stp]
@@ -68,6 +70,7 @@ class StepperMotor(object):
 
 
 class BoundedStepperMotor(object):
+    """A stepper motor with two keys to stop when collide onto."""
 
     def __init__(self,
                  pin_en,
@@ -124,7 +127,7 @@ class BoundedStepperMotor(object):
         GPIO.output(self.pins[0], GPIO.HIGH)
 
 
-def main():
+def test():
     with GpioManager() as _:
         motor_x = BoundedStepperMotor(5, 3, 4, 6, 7, freq=1000)
         print(motor_x.calibrate())
@@ -138,4 +141,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    test()
