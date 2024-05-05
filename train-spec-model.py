@@ -39,7 +39,7 @@ def load_dataset(data_dir: str) -> tf.data.Dataset:
         batch_size=32,
         validation_split=0.1,
         seed=0,
-        output_sequence_length=audio_utils.VOICE_SAMPLERATE * 1.5,
+        output_sequence_length=audio_utils.VOICE_SAMPLERATE * 1,
         subset="both")
     labels = train_ds.class_names
 

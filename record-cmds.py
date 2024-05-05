@@ -2,6 +2,7 @@
 # coding: utf-8
 """A simple tool to record audio clips."""
 
+import os
 import argparse
 import tkinter as tk
 import tkinter.font as tkFont
@@ -15,7 +16,7 @@ class AudioRecorderApp:
 
     def __init__(self, master, duration, outdir, scale=1.0):
         self.master = master
-        master.title("Audio Recorder")
+        master.title(f"Audio Recorder @ {os.path.basename(outdir)}")
 
         dpi = int(96 * scale)
         self.figure, (self.ax1, self.ax2) = plt.subplots(2, 1, dpi=dpi)

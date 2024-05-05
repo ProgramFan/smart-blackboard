@@ -8,9 +8,8 @@ import numpy as np
 import scipy
 import os
 import re
-import tensorflow as tf
 
-VOICE_SAMPLERATE = 48000
+VOICE_SAMPLERATE = 16000
 
 
 def select_sample_rate(dev):
@@ -39,7 +38,7 @@ def select_input_device():
     return result
 
 
-def record_voice(dev, duration, samplerate):
+def record_voice(dev, duration, samplerate, downsample=True):
     rec = sd.rec(int(duration * samplerate),
                  samplerate=samplerate,
                  channels=1,
@@ -47,7 +46,7 @@ def record_voice(dev, duration, samplerate):
                  device=dev)
     sd.wait()
     rec = rec.flatten()
-    if samplerate != VOICE_SAMPLERATE:
+    if downsample and samplerate > VOICE_SAMPLERATE:
         rec = librosa.resample(rec,
                                orig_sr=samplerate,
                                target_sr=VOICE_SAMPLERATE)
@@ -58,29 +57,26 @@ def save_voice(data, fn):
     scipy.io.wavfile.write(fn, VOICE_SAMPLERATE, np.int16(data * 32767))
 
 
-def extract_voice_features(audio, method="mfcc"):
-    if method == "mfcc":
-        return make_mfcc(audio)
-    elif method == "spectrogram":
-        return make_spectrogram(audio)
+def extract_voice_features(audio, feature="mfcc", **kwargs):
+    if feature == "mfcc":
+        return make_mfcc(audio, **kwargs)
+    elif feature == "spectrogram":
+        return make_spectrogram(audio, **kwargs)
+    else:
+        raise ValueError(f"Invalid voice feature {feature!r}")
 
 
-def make_mfcc(audio_array):
-    mfcc = librosa.feature.mfcc(y=audio_array, sr=VOICE_SAMPLERATE, n_mfcc=20)
-    mfcc = np.expand_dims(mfcc.T, axis=-1)
-    return mfcc
+def make_mfcc(audio_array, sr=VOICE_SAMPLERATE, n_mfcc=13):
+    """Convert 1d audio to 2d image using mfcc"""
+    mfcc = librosa.feature.mfcc(y=audio_array, sr=sr, n_mfcc=n_mfcc)
+    return mfcc.T  # first dim is time, the second is mfcc
 
 
-def make_spectrogram(audio_array):
-    # Convert the waveform to a spectrogram via a STFT.
-    spectrogram = tf.signal.stft(audio_array, frame_length=255, frame_step=128)
-    # Obtain the magnitude of the STFT.
-    spectrogram = tf.abs(spectrogram)
-    # Add a `channels` dimension, so that the spectrogram can be used
-    # as image-like input data with convolution layers (which expect
-    # shape (`batch_size`, `height`, `width`, `channels`).
-    spectrogram = spectrogram[..., tf.newaxis]
-    return spectrogram
+def make_spectrogram(audio_array, n_fft=2048, hop_length=512):
+    """Convert 1d audio to 2d image using spectrogram"""
+    d = librosa.stft(audio_array, n_fft=n_fft, hop_length=hop_length)
+    d = librosa.amplitude_to_db(np.abs(d), ref=np.max(np.abs(d)))
+    return d
 
 
 def draw_spectrogram(ax, data, samplerate, title=True, xlabel=True):
