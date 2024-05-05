@@ -7,6 +7,7 @@ import argparse
 import os
 import tensorflow as tf
 import numpy as np
+import json
 
 
 def build_model(input_shape, num_classes):
@@ -84,6 +85,8 @@ def train_voice_model(data_dir, model_fn):
                   metrics=["accuracy"])
     model.fit(dataset, epochs=5)
     model.save(model_fn)
+    with open(model_fn + ".labels", "w", encoding="utf8") as f:
+        json.dump(label_strs, f, indent=2)
 
 
 def main():
