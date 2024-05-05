@@ -85,6 +85,10 @@ def train_voice_model(data_dir, model_fn, epoches):
     model.save(model_fn)
     with open(model_fn + ".labels", "w", encoding="utf8") as f:
         json.dump(label_strs, f, indent=2)
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    tflite_model = converter.convert()
+    with open(model_fn + ".lite", "wb") as f:
+        f.write(tflite_model)
 
 
 def main():
