@@ -9,7 +9,7 @@ import scipy
 import os
 import re
 
-VOICE_SAMPLERATE = 16000
+VOICE_SAMPLERATE = 48000
 
 
 def select_sample_rate(dev):
@@ -55,6 +55,12 @@ def record_voice(dev, duration, samplerate):
 
 def save_voice(data, fn):
     scipy.io.wavfile.write(fn, VOICE_SAMPLERATE, np.int16(data * 32767))
+
+
+def extract_voice_features(audio_array):
+    mfcc = librosa.feature.mfcc(y=audio_array, sr=VOICE_SAMPLERATE, n_mfcc=20)
+    mfcc = np.expand_dims(mfcc.T, axis=-1)
+    return mfcc
 
 
 def draw_spectrogram(ax, data, samplerate, title=True, xlabel=True):

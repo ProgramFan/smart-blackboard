@@ -8,6 +8,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import json
+import audio_utils
 
 
 def build_model(input_shape, num_classes):
@@ -25,9 +26,7 @@ def build_model(input_shape, num_classes):
     return model
 
 
-def load_dataset(data_dir: str,
-                 sr: int = 16000,
-                 n_mfcc: int = 13) -> tf.data.Dataset:
+def load_dataset(data_dir: str) -> tf.data.Dataset:
     """
     Load audio files and their labels from the specified directory,
     compute the MFCCs, and return a TensorFlow Dataset containing the
@@ -49,12 +48,11 @@ def load_dataset(data_dir: str,
     features = []
 
     def preprocess(file_path):
-        audio, _ = librosa.load(file_path, sr=sr)
-        mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=n_mfcc)
+        audio, _ = librosa.load(file_path, sr=audio_utils.VOICE_SAMPLERATE)
         label = label_to_int[file_path.split(os.sep)[-2]]
-        mfcc = np.expand_dims(mfcc.T, axis=-1)
-        mfcc = np.expand_dims(mfcc, axis=0)
-        label = [label]
+        mfcc = audio_utils.extract_voice_features(audio)
+        mfcc = np.expand_dims(mfcc, axis=0)  # add one dim to make Conv2D happy
+        label = [label]  # add one dim to match mfcc
         return mfcc, [label]
 
     for root, _, files in os.walk(data_dir):
@@ -71,7 +69,7 @@ def load_dataset(data_dir: str,
     return dataset, all_labels
 
 
-def train_voice_model(data_dir, model_fn):
+def train_voice_model(data_dir, model_fn, epoches):
     dataset, label_strs = load_dataset(data_dir)
     num_datapoints = dataset.reduce(0, lambda x, _: x + 1).numpy()
     print(f">>> Dataset contains {num_datapoints} data items " +
@@ -83,7 +81,7 @@ def train_voice_model(data_dir, model_fn):
     model.compile(optimizer="adam",
                   loss="sparse_categorical_crossentropy",
                   metrics=["accuracy"])
-    model.fit(dataset, epochs=5)
+    model.fit(dataset, epochs=epoches)
     model.save(model_fn)
     with open(model_fn + ".labels", "w", encoding="utf8") as f:
         json.dump(label_strs, f, indent=2)
@@ -94,8 +92,12 @@ def main():
     parser.add_argument(
         "data_dir", help="data directory with files '<cmd>|<cmd>-cn/xxxx.wav'")
     parser.add_argument("model_fn", help="file to save model into")
+    parser.add_argument("--epoches",
+                        default=5,
+                        type=int,
+                        help="training epoches")
     args = parser.parse_args()
-    train_voice_model(args.data_dir, args.model_fn)
+    train_voice_model(args.data_dir, args.model_fn, epoches=args.epoches)
 
 
 if __name__ == "__main__":
