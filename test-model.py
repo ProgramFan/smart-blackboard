@@ -18,15 +18,15 @@ def load_model(model_fn):
     return (model, label_strs)
 
 
-def do_predict(model_fn, sr, duration, feature="mfcc"):
+def do_predict(model_fn, sr, duration, feature="mfcc", **kwargs):
     dev_info = audio_utils.select_input_device()[0]
     model, label_strs = load_model(model_fn)
 
     def mkfeature(x):
         if feature == "spectrogram":
-            return audio_utils.make_spectrogram(x)
+            return audio_utils.make_spectrogram(x, **kwargs)
         else:
-            return audio_utils.make_mfcc(x, sr=sr)
+            return audio_utils.make_mfcc(x, sr=sr, **kwargs)
 
     try:
         while True:
@@ -69,8 +69,16 @@ def main():
                         default="mfcc",
                         choices=("mfcc", "spectrogram"),
                         help="feature to extract (default: %(default)s)")
+    parser.add_argument("--n_mfcc",
+                        default=20,
+                        type=int,
+                        help="number of mfcc (only for mfcc feature)")
     args = parser.parse_args()
-    do_predict(args.model_fn, args.sr, args.duration, args.feature)
+    do_predict(args.model_fn,
+               args.sr,
+               args.duration,
+               args.feature,
+               n_mfcc=args.n_mfcc)
 
 
 if __name__ == "__main__":

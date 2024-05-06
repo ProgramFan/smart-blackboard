@@ -51,7 +51,8 @@ def load_dataset(data_dir,
                  sr=audio_utils.VOICE_SAMPLERATE,
                  duration=1.0,
                  batch_size=32,
-                 feature="mfcc"):
+                 feature="mfcc",
+                 **kwargs):
     """Load the audio files and convert them into a dataset of shape (batch,
     height, width, channel)"""
     train_ds, val_ds = tf.keras.utils.audio_dataset_from_directory(
@@ -67,9 +68,9 @@ def load_dataset(data_dir,
 
     def make_feature(data):
         if feature == "mfcc":
-            return audio_utils.make_mfcc(data, sr=sr)
+            return audio_utils.make_mfcc(data, sr=sr, **kwargs)
         else:
-            return audio_utils.make_spectrogram(data)
+            return audio_utils.make_spectrogram(data, **kwargs)
 
     def make_dataset(ds):
         nitems = ds.cardinality().numpy()
@@ -92,10 +93,10 @@ def load_dataset(data_dir,
 
 
 def train_voice_model(data_dir, model_fn, audio_sr, audio_duration, model_name,
-                      epoches, batch_size, feature):
+                      epoches, batch_size, feature, **kwargs):
     train_ds, val_ds, label_strs = load_dataset(data_dir, audio_sr,
                                                 audio_duration, batch_size,
-                                                feature)
+                                                feature, **kwargs)
     for features, _ in train_ds.take(1):
         input_shape = features.shape[1:]
         batch_size = features.shape[0]
@@ -145,6 +146,10 @@ def main():
                         default="mfcc",
                         choices=("mfcc", "spectrogram"),
                         help="feature to extract (default: %(default)s)")
+    parser.add_argument("--n_mfcc",
+                        default=20,
+                        type=int,
+                        help="number of mfcc (only for mfcc feature)")
     parser.add_argument("--model",
                         default="v1",
                         choices=("v1", "v2"),
@@ -165,6 +170,7 @@ def main():
                       epoches=args.epoches,
                       batch_size=args.batch_size,
                       feature=args.feature,
+                      n_mfcc=args.n_mfcc,
                       model_name=args.model)
 
 
