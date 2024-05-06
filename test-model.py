@@ -21,31 +21,34 @@ def load_model(model_fn):
 def do_predict(model_fn, sr, duration, feature="mfcc"):
     dev_info = audio_utils.select_input_device()[0]
     model, label_strs = load_model(model_fn)
-    mkfeature = lambda x: audio_utils.make_mfcc(x, sr=sr)
-    if feature == "spectrogram":
-        mkfeature = lambda x: audio_utils.make_spectrogram(x)
+
+    def mkfeature(x):
+        if feature == "spectrogram":
+            return audio_utils.make_spectrogram(x)
+        else:
+            return audio_utils.make_mfcc(x, sr=sr)
 
     try:
         while True:
             data = audio_utils.record_voice(dev_info[0],
-                                            1.5,
+                                            duration,
                                             dev_info[2],
                                             downsample=False)
             if dev_info[2] != sr:
                 data = librosa.resample(data,
                                         orig_sr=dev_info[2],
                                         target_sr=sr)
-            mfcc = mkfeature(data)
-            mfcc = np.expand_dims(mfcc, axis=-1)
-            predictions = model.predict(np.array([mfcc]))
+            indata = mkfeature(data)
+            indata = np.expand_dims(indata, axis=-1)  # add extra channel
+            predictions = model.predict(np.array([indata]))[0]
             print("Probability:")
-            for i, v in enumerate(predictions[0]):
+            for i, v in enumerate(predictions):
                 print(f"  {label_strs[i]}: {v*100:.3f}%")
-            predicted_label_index = np.argmax(predictions, axis=1)[0]
+            predicted_label_index = np.argmax(predictions)
             print(f"Voice command: {label_strs[predicted_label_index]}")
-            for _ in range(5):
-                print(".", end="", flush=True)
-                time.sleep(0.2)
+            for i in range(5):
+                print(f"{5-i} ", end="", flush=True)
+                time.sleep(0.4)
             print("=>", flush=True)
     except KeyboardInterrupt:
         return
@@ -53,15 +56,15 @@ def do_predict(model_fn, sr, duration, feature="mfcc"):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("model_fn", help="file to load model from")
+    parser.add_argument("model_fn", help="pretrained model file")
     parser.add_argument("--sr",
                         type=int,
                         default=audio_utils.VOICE_SAMPLERATE,
-                        help="voice sample rate (match the training data)")
+                        help="voice sample rate (shall match training data)")
     parser.add_argument("--duration",
                         type=float,
                         default=1.5,
-                        help="voice record duration in secs.")
+                        help="voice record secs (shall match training data)")
     parser.add_argument("--feature",
                         default="mfcc",
                         choices=("mfcc", "spectrogram"),
