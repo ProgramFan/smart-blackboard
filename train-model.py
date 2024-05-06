@@ -52,38 +52,41 @@ def load_dataset(data_dir,
                  duration=1.0,
                  batch_size=32,
                  feature="mfcc"):
+    """Load the audio files and convert them into a dataset of shape (batch,
+    height, width, channel)"""
     train_ds, val_ds = tf.keras.utils.audio_dataset_from_directory(
         directory=data_dir,
         validation_split=0.1,
         seed=0,
-        batch_size=batch_size,
+        batch_size=1,  # use batch size 1 for easy datasize calc.
         output_sequence_length=sr * duration,
         subset="both")
+    # first, we save all the label strings, since the dataset uses their indexes
+    # as the labels.
     label_strs = train_ds.class_names
 
-    mkfeature = lambda x: audio_utils.make_mfcc(x, sr=sr)
-    if feature == "spectrogram":
-        mkfeature = lambda x: audio_utils.make_spectrogram(x)
+    def make_feature(data):
+        if feature == "mfcc":
+            return audio_utils.make_mfcc(data, sr=sr)
+        else:
+            return audio_utils.make_spectrogram(data)
 
-    def numpy_feature(audio_batch):
-        # input data is (batch, x), so we have to loop the batch.
-        a = audio_batch.numpy()
-        sample_output = mkfeature(a[0])
-        x, y = sample_output.shape
-        output = np.zeros((a.shape[0], x, y))
-        output[0] = sample_output
-        for i in range(1, a.shape[0]):
-            output[i] = mkfeature(a[i])
-        output = np.expand_dims(output, axis=-1)
-        return output
+    def make_dataset(ds):
+        nitems = ds.cardinality().numpy()
+        labels = np.zeros(nitems)
+        for f, _ in ds.take(1):
+            sample_feature = make_feature(f.numpy()[0, :, 0])
+            shape = sample_feature.shape
+            features = np.zeros((nitems, shape[0], shape[1]))
+        for i, (f, l) in enumerate(ds):
+            features[i] = make_feature(f.numpy()[0, :, 0])
+            labels[i] = l.numpy()[0]
+        features = np.expand_dims(features, axis=-1)  # add a last channel dim
+        result = tf.data.Dataset.from_tensor_slices((features, labels))
+        return result.batch(batch_size)
 
-    def make_feature(audio, labels):
-        audio = tf.squeeze(audio, axis=-1)
-        features = tf.py_function(numpy_feature, [audio], Tout=tf.float32)
-        return features, labels
-
-    train_ds = train_ds.map(make_feature, tf.data.AUTOTUNE)
-    val_ds = val_ds.map(make_feature, tf.data.AUTOTUNE)
+    train_ds = make_dataset(train_ds)
+    val_ds = make_dataset(val_ds)
 
     return (train_ds, val_ds, label_strs)
 
@@ -112,7 +115,7 @@ def train_voice_model(data_dir, model_fn, audio_sr, audio_duration, model_name,
     model.compile(optimizer="adam",
                   loss="sparse_categorical_crossentropy",
                   metrics=["accuracy"])
-    print(model.summary())
+    model.summary()
     model.fit(train_ds, epochs=epoches)
     test_loss, test_accuracy = model.evaluate(val_ds)
     print(f">>> Test accuracy: {test_accuracy}, Test loss: {test_loss}")
