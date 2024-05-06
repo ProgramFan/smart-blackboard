@@ -2,13 +2,17 @@
 # coding: utf-8
 """Voice command recoginization model tester"""
 
+import os
 import librosa
 import argparse
-import tensorflow as tf
+import re
 import numpy as np
 import json
 import audio_utils
 import time
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf console logging
+import tensorflow as tf  # pylint: disable=wrong-import-position
 
 
 def load_model(model_fn):
@@ -19,12 +23,24 @@ def load_model(model_fn):
 
 
 def do_predict(model_fn, sr, duration, feature="mfcc", **kwargs):
-    dev_info = audio_utils.select_input_device()[0]
+    dev_infos = audio_utils.select_input_device()
+    print("Input devices on system: ")
+    for i, v in enumerate(dev_infos):
+        print(f"  [{i}] {v}")
+    while True:
+        chosen = input(f"Which device to use ? [0-{len(dev_infos)-1}]: ")
+        if not re.match(r"^\d+$", chosen):
+            continue
+        chosen = int(chosen)
+        if chosen < 0 or chosen >= len(dev_infos):
+            continue
+        break
+    dev_info = dev_infos[chosen]
     model, label_strs = load_model(model_fn)
 
     def mkfeature(x):
         if feature == "spectrogram":
-            return audio_utils.make_spectrogram(x, **kwargs)
+            return audio_utils.make_spectrogram(x)
         else:
             return audio_utils.make_mfcc(x, sr=sr, **kwargs)
 

@@ -4,11 +4,15 @@
 
 import argparse
 import json
-import tensorflow as tf
-import numpy as np
 import audio_utils
+import numpy as np
+import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf console logging
+import tensorflow as tf  # pylint: disable=wrong-import-position
 
 
+# Problem with this model: it does not converge in training, don't know why.
 def build_model2(input_shape, num_classes, train_ds):
     norm_layer = tf.keras.layers.Normalization()
     norm_layer.adapt(data=train_ds.map(map_func=lambda spec, label: spec))
@@ -32,7 +36,7 @@ def build_model2(input_shape, num_classes, train_ds):
     return model
 
 
-def build_model1(input_shape, num_classes, train_ds):
+def build_model1(input_shape, num_classes, _):
     model = tf.keras.models.Sequential([
         tf.keras.layers.Input(shape=input_shape),
         tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu"),
@@ -70,7 +74,7 @@ def load_dataset(data_dir,
         if feature == "mfcc":
             return audio_utils.make_mfcc(data, sr=sr, **kwargs)
         else:
-            return audio_utils.make_spectrogram(data, **kwargs)
+            return audio_utils.make_spectrogram(data)
 
     def make_dataset(ds):
         nitems = ds.cardinality().numpy()
