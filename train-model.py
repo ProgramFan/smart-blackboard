@@ -9,7 +9,10 @@ import numpy as np
 import os
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf console logging
-import tensorflow as tf  # pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
+import tensorflow as tf
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.models import Sequential
 
 
 # Problem with this model: it does not converge in training, don't know why.
@@ -30,10 +33,37 @@ def build_model2(input_shape, num_classes, train_ds):
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(128, activation="relu"),
         tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(num_classes),
+        tf.keras.layers.Dense(num_classes, activation="softmax"),
     ])
 
     return model
+
+
+def create_model(name, input_shape, num_classes, dataset):
+    if name == "v1":
+        return build_model1(input_shape, num_classes, dataset)
+    elif name == "v2":
+        return build_model2(input_shape, num_classes, dataset)
+    elif name == "v3":
+        return Sequential([
+            Conv2D(32, (3, 3), activation="relu", input_shape=input_shape),
+            MaxPooling2D((2, 2)),
+            Conv2D(64, (3, 3), activation="relu"),
+            MaxPooling2D((2, 2)),
+            Flatten(),
+            Dense(64, activation="relu"),
+            Dense(num_classes, activation="softmax")
+        ])
+    elif name == "v4":
+        return Sequential([
+            Flatten(input_shape=input_shape),
+            Dense(128, activation="relu"),
+            Dense(128, activation="relu"),
+            Dense(num_classes, activation="softmax")
+        ])
+
+    else:
+        return
 
 
 def build_model1(input_shape, num_classes, _):
@@ -113,10 +143,7 @@ def train_voice_model(data_dir, model_fn, audio_sr, audio_duration, model_name,
     print(f">>> Data labels: {label_strs}")
     print(f">>> Input shape: {input_shape}")
     print(f">>> Num of classes: {len(label_strs)}")
-    if model_name == "v1":
-        model = build_model1(input_shape, len(label_strs), train_ds)
-    elif model_name == "v2":
-        model = build_model2(input_shape, len(label_strs), train_ds)
+    model = create_model(model_name, input_shape, len(label_strs), train_ds)
     model.compile(optimizer="adam",
                   loss="sparse_categorical_crossentropy",
                   metrics=["accuracy"])
@@ -156,7 +183,7 @@ def main():
                         help="number of mfcc (only for mfcc feature)")
     parser.add_argument("--model",
                         default="v1",
-                        choices=("v1", "v2"),
+                        choices=("v1", "v2", "v3", "v4"),
                         help="model to train (default: %(default)s)")
     parser.add_argument("--epoches",
                         default=50,
