@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
                     QStyle.SP_DriveDVDIcon)), "洁净"),
             QPushButton(
                 QIcon(QApplication.style().standardIcon(
-                    QStyle.SP_DriveDVDIcon)), "快速"),
+                    QStyle.SP_MediaPlay)), "语音"),
         ]
 
         font = QFont()
