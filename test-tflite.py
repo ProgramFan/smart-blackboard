@@ -12,7 +12,7 @@ import time
 
 
 def load_model(model_fn):
-    model =tflite.Interpreter(model_path=model_fn)
+    model =tflite.Interpreter(model_path=model_fn + ".tflite")
     model.allocate_tensors()
     with open(model_fn + ".labels", encoding="utf-8") as f:
         label_strs = json.load(f)
@@ -22,6 +22,8 @@ def load_model(model_fn):
 def do_predict(model_fn, sr, duration, feature="mfcc", **kwargs):
     dev_info = audio_utils.select_input_device()[0]
     model, label_strs = load_model(model_fn)
+    input_details = model.get_input_details()
+    output_details = model.get_output_details()
 
     def mkfeature(x):
         if feature == "spectrogram":
@@ -43,10 +45,10 @@ def do_predict(model_fn, sr, duration, feature="mfcc", **kwargs):
             indata = np.expand_dims(indata, axis=-1)  # add extra channel
 
 #            predictions = model.predict(np.array([indata]))[0]
-            interpreter.set_tensor(input_details[0]['index'],
-                                   np.array([indata], dtype=np.float32))
-            interpreter.invoke()  # Run inference
-            predictions = interpreter.get_tensor(output_details[0]['index'])[0]
+            model.set_tensor(input_details[0]['index'],
+                             np.array([indata], dtype=np.float32))
+            model.invoke()  # Run inference
+            predictions = model.get_tensor(output_details[0]['index'])[0]
 
             print("Probability:")
             for i, v in enumerate(predictions):
