@@ -2,15 +2,15 @@
   "devices": {
     "motor_x": {
       "pins": [5, 3, 4, 6, 7],
-      "length": 0.5
+      "length": 0.46
     },
     "motor_y": {
-      "pins": [10, 8, 9, 11, 12],
-      "length": 0.5
+      "pins": [10, 11, 12, 8, 9],
+      "length": 0.51
     },
     "motor_z": {
       "pins": [16, 14, 15],
-      "length": 0.15
+      "length": 0.05
     }
   },
   "motor_x": {
