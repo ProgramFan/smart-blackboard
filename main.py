@@ -86,6 +86,16 @@ class MainWindow(QMainWindow):
         self.buttons[7].clicked.connect(self.full_clean)
         self.buttons[8].clicked.connect(self.voice_control)
 
+        self.cmd_cn = {
+            "__noise__": "噪音",
+            "up": "向上",
+            "down": "向下",
+            "left": "向左",
+            "right": "向右",
+            "go": "全擦",
+            "stop": "停止",
+        }
+
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
@@ -176,6 +186,9 @@ class MainWindow(QMainWindow):
                 self.buttons[8].setIcon(
                     QIcon(QApplication.style().standardIcon(
                         QStyle.SP_MediaPause)))
+                self.buttons[8].setText("请发令")
+                self.buttons[8].repaint()
+                time.sleep(0.2)
                 data = audio_utils.record_voice(self.voice_device[0],
                                                 self.voice_duration,
                                                 self.voice_device[2],
@@ -183,12 +196,16 @@ class MainWindow(QMainWindow):
                 self.buttons[8].setIcon(
                     QIcon(QApplication.style().standardIcon(
                         QStyle.SP_MediaPlay)))
+                self.buttons[8].setText("解析中")
+                self.buttons[8].repaint()
                 result = self.model.predict(data, self.voice_device[2])
                 print("Probability:")
                 for k, v in result["details"].items():
                     print(f"  {k}: {v*100:.3f}%")
                 print(f"Voice command: {result['command']}")
                 cmd = result["command"]
+                self.buttons[8].setText(self.cmd_cn[cmd])
+                self.buttons[8].repaint()
                 if result["details"][cmd] <= 0.8:
                     continue
                 if cmd == "__noise__":
@@ -196,6 +213,8 @@ class MainWindow(QMainWindow):
                 elif cmd == "go":
                     self.full_clean()
                 elif cmd == "stop":
+                    self.buttons[8].setText("语音")
+                    self.buttons[8].repaint()
                     break
                 elif cmd == "up":
                     self.go_up()
