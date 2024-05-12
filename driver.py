@@ -122,9 +122,11 @@ class BoundedStepperMotor(object):
         GPIO.remove_event_detect(k0)
         GPIO.remove_event_detect(k1)
         ans = input(">>> Is the object going forward (1) or backward (0)? ")
-        clockwise = int(ans) == 1
+        clockwise = int(ans) == 1 # whether motor goes clockwise if we move forward
+        # self.drive expect that if go clockwise, k1 shall be pressed, swap if we
+        # detect something different.
         shall_swap = False
-        if (clockwise and k0_pressed) or (not clockwise and k1_pressed):
+        if k0_pressed:
             shall_swap = True
         if shall_swap:
             print(f">>> swapping {self.bounds}")
