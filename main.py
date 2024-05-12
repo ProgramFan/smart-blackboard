@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
         if not forward:
             clockwise = not clockwise
         duration = length / speed
-        self.motors[motor].drive(duration, freq=freq, dc=0.5, clockwise=clockwise)
+        self.motors[motor].drive(duration, freq=freq, dc=0.8, clockwise=clockwise)
 
     def go(self, direction, nsteps, reverse=False, speed_mul=1.0):
         if direction == "x":
@@ -141,8 +141,6 @@ class MainWindow(QMainWindow):
         self.go("x", 100, reverse=True)
         self.go("y", 100, reverse=True)
         self.go("z", 2)
-        self.drive_motor("x", 0.02)
-        self.drive_motor("y", 0.02)
 
     def manual(self):
         self.go("z", 2, reverse=True)

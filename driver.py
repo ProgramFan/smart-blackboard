@@ -160,9 +160,24 @@ class BoundedStepperMotor(object):
         GPIO.output(self.pins[1], GPIO.HIGH if clockwise else GPIO.LOW)
         p = GPIO.PWM(self.pins[2], real_freq)
         d = self.bounds[1] if clockwise else self.bounds[0]
+        GPIO.add_event_detect(d, GPIO.RISING)
         p.start(real_dc * 100)  # GPIO.PWM use dc from 0 to 100
-        GPIO.wait_for_edge(d, GPIO.RISING, timeout=int(duration * 1000))
+        collision_detected = False
+        for _ in range(int(duration * 100)):
+            time.sleep(0.01)
+            if GPIO.event_detected(d):
+                collision_detected = True
+                break
         p.stop()
+        GPIO.remove_event_detect(d)
+        if collision_detected:
+            # go backward a little bit to release button
+            GPIO.output(self.pins[0], GPIO.HIGH)
+            GPIO.output(self.pins[1], GPIO.LOW if clockwise else GPIO.HIGH)
+            p = GPIO.PWM(self.pins[2], real_freq)
+            p.start(real_dc * 100)
+            time.sleep(0.1)
+            p.stop()
 
     def forward(self, duration=3600, freq=None, dc=None):
         self.drive(duration, freq, dc, True)
