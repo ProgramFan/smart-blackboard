@@ -177,11 +177,11 @@ class BoundedStepperMotor(object):
 
 def test():
     with GpioManager() as _:
-        motor_x = BoundedStepperMotor(5, 3, 4, 6, 7, freq=1000)
+        motor_x = BoundedStepperMotor(3, 4, 5, 6, 7, freq=1000)
+        print(motor_x.calibrate(1000, 0.5))
         motor_x.release()
         input("Put the motor to left")
         motor_x.hold()
-        print(motor_x.calibrate(1000, 0.5))
         input("Press enter to start")
         for _ in range(4):
             print("Goes forward")
@@ -194,11 +194,11 @@ def test():
 
 def test2():
     with GpioManager() as _:
-        motor_x = StepperMotor(5, 3, 4, freq=4000)
+        motor_x = StepperMotor(14, 15, 16, freq=4000)
+        print(motor_x.calibrate(4000, 0.15))
         motor_x.release()
         input("Put the motor to left")
         motor_x.hold()
-        print(motor_x.calibrate(4000, 0.15))
         input("Press enter to start")
         for _ in range(4):
             print("Goes forward")

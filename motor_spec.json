@@ -1,7 +1,7 @@
 {
   "devices": {
     "motor_x": {
-      "pins": [5, 3, 4, 6, 7],
+      "pins": [3, 4, 5, 6, 7],
       "length": 0.46
     },
     "motor_y": {
@@ -9,7 +9,7 @@
       "length": 0.51
     },
     "motor_z": {
-      "pins": [16, 14, 15],
+      "pins": [14, 15, 16],
       "length": 0.05
     }
   },
