@@ -18,6 +18,7 @@ import sys
 import os
 import json
 import argparse
+import time
 
 
 class MainWindow(QMainWindow):
