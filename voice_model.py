@@ -20,11 +20,14 @@ class VoiceCmdModel(object):
     """A voice command predication model based on mfcc"""
 
     def __init__(self, fn, sr, duration, feature, **kwargs):
-        self.model = tflite.Interpreter(model_path=fn + ".tflite")
+        fn_stem = fn
+        if fn_stem.endswith(".tflite"):
+            fn_stem = fn_stem[:-7]
+        self.model = tflite.Interpreter(model_path=fn_stem + ".tflite")
         self.model.allocate_tensors()
         self.input_details = self.model.get_input_details()
         self.output_details = self.model.get_output_details()
-        with open(fn + ".labels", encoding="utf-8") as f:
+        with open(fn_stem + ".labels", encoding="utf-8") as f:
             self.label_strs = json.load(f)
         self.model_sr = sr
         self.model_duration = duration
@@ -88,10 +91,10 @@ def loop_predict(model_fn, sr, duration, feature, **kwargs):
                                             dev_info[2],
                                             downsample=False)
             result = model.predict(data, dev_info[2])
-            print(f"Voice command: {result['command']}")
             print("Probability:")
             for k, v in result["details"].items():
                 print(f"  {k}: {v*100:.3f}%")
+            print(f"Voice command: {result['command']}")
             for i in range(5):
                 print(f"{5-i} ", end="", flush=True)
                 time.sleep(0.8)
