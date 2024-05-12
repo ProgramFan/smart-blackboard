@@ -26,8 +26,39 @@ class StepperMotor(object):
 
     def __init__(self, pin_en, pin_dir, pin_stp, freq=1000, dc=0.5):
         self.pins = [pin_en, pin_dir, pin_stp]
+        self.default_freq = freq
+        self.default_dc = dc
+        self.reset()
+
+    def reset(self):
         for p in self.pins:
             GPIO.setup(p, GPIO.OUT, initial=GPIO.LOW)
+
+    def calibrate(self, freq, length):
+        print(f"= Calibrating with PWM freq {freq}Hz for length {length}m =")
+        print("Check direction:")
+        self.release()
+        input("Place the object to the center and press enter")
+        self.hold()
+        self.forward(2, freq=freq)
+        ans = input("Is the object going forward (1) or backward (0)?")
+        clockwise = int(ans) == 1
+        self.release()
+        input("Place the object to the forward start and press enter.")
+        self.hold()
+        GPIO.output(self.pins[0], GPIO.HIGH)
+        GPIO.output(self.pins[1], GPIO.HIGH if clockwise else GPIO.LOW)
+        p = GPIO.PWM(self.pins[2], freq)
+        p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
+        t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
+        input("Press enter when the object reaches the other end")
+        t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
+        p.stop()
+        return {
+            "clockwise": clockwise,
+            "freq": freq,
+            "speed": length / (t1 - t0)
+        }
 
     def drive(self, duration, freq, dc, clockwise):
         GPIO.output(self.pins[0], GPIO.HIGH)
@@ -36,28 +67,6 @@ class StepperMotor(object):
         p.start(dc * 100)  # GPIO.PWM use dc from 0 to 100
         time.sleep(duration)
         p.stop()
-
-    def calibrate(self, freq):
-        self.release()
-        input("Please set the object to middle")
-        self.hold()
-        print("Check direction:")
-        input("Please set the object to the middle and press enter")
-        self.forward(2, freq=freq)
-        ans = input("Is the object going forward (1) or backward (0)?")
-        direction = int(ans) == 1
-        self.release()
-        input("Place the object to one end and press enter to start.")
-        self.hold()
-        GPIO.output(self.pins[0], GPIO.HIGH)
-        GPIO.output(self.pins[1], GPIO.HIGH)
-        p = GPIO.PWM(self.pins[2], freq)
-        p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
-        t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
-        input("Press enter when the object reaches the other end")
-        t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
-        p.stop()
-        return {"clockwise": direction, "freq": freq, "time": t1 - t0}
 
     def forward(self, duration, freq=500, dc=0.50):
         self.drive(duration, freq, dc, True)
@@ -89,16 +98,50 @@ class BoundedStepperMotor(object):
         self.default_dc = dc
         self.reset()
 
-    def calibrate(self, freq=1000):
+    def calibrate(self, freq, length):
+        print(f"= Calibrating with PWM freq {freq}Hz for length {length}m =")
+        print("Check direction:")
+        self.release()
+        input("Place the object to the center and press enter")
+        self.hold()
+        GPIO.output(self.pins[0], GPIO.HIGH)
+        GPIO.output(self.pins[1], GPIO.HIGH)
+        p = GPIO.PWM(self.pins[2], freq)
+        k0, k1 = self.bounds
+        GPIO.add_event_detect(k0, GPIO.RISING)
+        GPIO.add_event_detect(k1, GPIO.RISING)
+        p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
+        input("Press the collision detection button on the correct end")
+        for _ in range(2 * 100):
+            time.sleep(0.01)
+            k0_pressed = GPIO.event_detected(k0)
+            k1_pressed = GPIO.event_detected(k1)
+            if k0_pressed or k1_pressed:
+                break
+        p.stop()
+        GPIO.remove_event_detect(k0)
+        GPIO.remove_event_detect(k1)
+        ans = input("Is the object going forward (1) or backward (0)?")
+        clockwise = int(ans) == 1
+        shall_swap = False
+        if (clockwise and k0_pressed) or (not clockwise and k1_pressed):
+            shall_swap = True
+        if shall_swap:
+            self.bounds[0], self.bounds[1] = self.bounds[1], self.bounds[0]
         # a very large duration to ensure reach the boundary.
+        print("The motor will go backward to the forward start.")
         trial_duration = 3600  # an hour
-        self.backward(trial_duration, freq)
+        self.drive(trial_duration, freq, 0.5, not clockwise)
+        print("The motor will perform a full move forward.")
         t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
-        self.forward(trial_duration, freq)
+        self.drive(trial_duration, freq, 0.5, clockwise)
         t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
-        ans = input("Does the full move goes forward (Y) or backward (N)?")
-        direction = bool(ans.lower().startswith("y"))
-        return {"clockwise": direction, "freq": freq, "time": t1 - t0}
+        return {
+            "clockwise": clockwise,
+            "freq": freq,
+            "speed": length / (t1 - t0),
+            "swap_bounds": shall_swap
+        }
 
     def reset(self):
         for p in self.pins:
@@ -136,7 +179,7 @@ def test():
         motor_x.release()
         input("Put the motor to left")
         motor_x.hold()
-        print(motor_x.calibrate())
+        print(motor_x.calibrate(1000, 0.5))
         input("Press enter to start")
         for _ in range(4):
             print("Goes forward")
@@ -146,13 +189,14 @@ def test():
             motor_x.backward(10)
             print("Stopped")
 
+
 def test2():
     with GpioManager() as _:
-        motor_x = StepperMotor(5, 3, 4)
+        motor_x = StepperMotor(5, 3, 4, freq=4000)
         motor_x.release()
         input("Put the motor to left")
         motor_x.hold()
-        print(motor_x.calibrate(1000))
+        print(motor_x.calibrate(4000, 0.15))
         input("Press enter to start")
         for _ in range(4):
             print("Goes forward")

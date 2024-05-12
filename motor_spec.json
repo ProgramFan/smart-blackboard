@@ -2,33 +2,30 @@
   "devices": {
     "motor_x": {
       "pins": [5, 3, 4, 6, 7],
-      "range": 100
+      "length": 0.5
     },
     "motor_y": {
       "pins": [10, 8, 9, 11, 12],
-      "range": 100
+      "length": 0.5
     },
     "motor_z": {
       "pins": [16, 14, 15],
-      "range": 100
+      "length": 0.15
     }
   },
   "motor_x": {
     "clockwise": true,
     "freq": 500,
-    "time": 12.59495687800063,
     "speed": 13
   },
   "motor_y": {
     "clockwise": false,
     "freq": 500,
-    "time": 11.36609055000008,
     "speed": 13
   },
   "motor_z": {
     "clockwise": false,
     "freq": 500,
-    "time": 11.36609055000008,
     "speed": 13
   }
 }

@@ -11,13 +11,20 @@ def calibrate(output_fn):
         data = json.load(f)
     with driver.GpioManager() as _:
         devices = data["devices"]
-        motor_x = driver.BoundedStepperMotor(*devices["motor_x"])
-        motor_y = driver.BoundedStepperMotor(*devices["motor_y"])
-        motor_z = driver.BoundedStepperMotor(*devices["motor_z"])
-        freq = 1000
-        x_data = motor_x.calibrate(freq)
-        y_data = motor_y.calibrate(freq)
-        z_data = motor_z.calibrate(freq)
+        motor_x = driver.BoundedStepperMotor(*devices["motor_x"]["pins"])
+        motor_y = driver.BoundedStepperMotor(*devices["motor_y"]["pins"])
+        motor_z = driver.StepperMotor(*devices["motor_z"]["pins"])
+        x_data = motor_x.calibrate(1000, devices["motor_x"]["length"])
+        y_data = motor_y.calibrate(1000, devices["motor_y"]["length"])
+        z_data = motor_z.calibrate(4000, devices["motor_y"]["length"])
+        if x_data["swap_bounds"]:
+            pins = devices["motor_x"]["pins"]
+            pins[-2], pins[-1] = pins[-1], pins[-2]
+        del x_data["swap_bounds"]
+        if y_data["swap_bounds"]:
+            pins = devices["motor_y"]["pins"]
+            pins[-2], pins[-1] = pins[-1], pins[-2]
+        del y_data["swap_bounds"]
         with open(output_fn, "w", encoding="utf8") as f:
             data["motor_x"] = x_data
             data["motor_y"] = y_data
