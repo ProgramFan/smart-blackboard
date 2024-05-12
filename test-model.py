@@ -64,7 +64,7 @@ def do_predict(model_fn, sr, duration, feature="mfcc", **kwargs):
             print(f"Voice command: {label_strs[predicted_label_index]}")
             for i in range(5):
                 print(f"{5-i} ", end="", flush=True)
-                time.sleep(0.4)
+                time.sleep(0.8)
             print("=>", flush=True)
     except KeyboardInterrupt:
         return
