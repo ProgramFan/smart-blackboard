@@ -1,0 +1,9 @@
+{
+  "fn": "model.keras",
+  "sr": 16000,
+  "duration": 1.0,
+  "feature": "mfcc",
+  "args": {
+    "n_mfcc": 20
+  }
+}

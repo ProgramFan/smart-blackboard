@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf8
+"""Main Application for smart blackboard"""
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton
 from PyQt5.QtWidgets import QGridLayout, QWidget, QSizePolicy
@@ -8,7 +9,10 @@ from PyQt5.QtWidgets import QStyle
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize
 from RPi import GPIO
+
 from driver import BoundedStepperMotor, StepperMotor
+from voice_model import VoiceCmdModel
+import audio_utils
 
 import sys
 import os
@@ -16,9 +20,10 @@ import json
 
 
 class MainWindow(QMainWindow):
+    """The main window"""
 
-    def __init__(self, motor_spec):
-        super(MainWindow, self).__init__()
+    def __init__(self, motor_spec, model_spec):
+        super(MainWindow).__init__()
 
         self.setWindowTitle("智能黑板擦控制程序")
         self.showFullScreen()
@@ -26,7 +31,7 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         layout = QGridLayout()
 
-        buttons = [
+        self.buttons = [
             QPushButton(
                 QIcon(QApplication.style().standardIcon(
                     QStyle.SP_BrowserReload)), "复位"),
@@ -52,103 +57,160 @@ class MainWindow(QMainWindow):
                 QIcon(QApplication.style().standardIcon(
                     QStyle.SP_DriveDVDIcon)), "洁净"),
             QPushButton(
-                QIcon(QApplication.style().standardIcon(
-                    QStyle.SP_MediaPlay)), "语音"),
+                QIcon(QApplication.style().standardIcon(QStyle.SP_MediaPlay)),
+                "语音"),
         ]
 
         font = QFont()
         font.setPixelSize(48)
-        for button in buttons:
+        for button in self.buttons:
             button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             button.setIconSize(QSize(48, 48))
             button.setFont(font)
 
         positions = [(i, j) for i in range(3) for j in range(3)]
 
-        for position, button in zip(positions, buttons):
+        for position, button in zip(positions, self.buttons):
             if button is not None:
                 layout.addWidget(button, *position)
 
-        buttons[0].clicked.connect(self.reset)
-        buttons[1].clicked.connect(self.close)
-        buttons[2].clicked.connect(self.manual)
-        buttons[3].clicked.connect(self.mode1)
-        buttons[4].clicked.connect(self.mode2)
-        buttons[5].clicked.connect(self.mode3)
-        buttons[6].clicked.connect(self.mode4)
-        buttons[7].clicked.connect(self.mode5)
-        buttons[8].clicked.connect(self.mode6)
+        self.buttons[0].clicked.connect(self.reset)
+        self.buttons[1].clicked.connect(self.close)
+        self.buttons[2].clicked.connect(self.manual)
+        self.buttons[3].clicked.connect(self.go_right)
+        self.buttons[4].clicked.connect(self.go_left)
+        self.buttons[5].clicked.connect(self.go_up)
+        self.buttons[6].clicked.connect(self.go_down)
+        self.buttons[7].clicked.connect(self.full_clean)
+        self.buttons[8].clicked.connect(self.voice_control)
 
         widget.setLayout(layout)
         self.setCentralWidget(widget)
 
-        with open(motor_spec, encoding="utf8") as f:
-            self.config = json.load(f)
+        # initialize voice command model
+        with open(model_spec, encoding="utf8") as f:
+            model_conf = json.load(f)
+        self.model = VoiceCmdModel(model_conf["fn"], model_conf["sr"],
+                                   model_conf["duration"],
+                                   model_conf["feature"], **model_conf["args"])
+        self.voice_device = audio_utils.select_input_device()[0]
+        self.voice_duration = model_conf["duration"]
 
-        devices = self.config.get("devices", {})
-        self.motor_x = BoundedStepperMotor(*devices["motor_x"])
-        self.motor_y = BoundedStepperMotor(*devices["motor_y"])
-        self.motor_z = StepperMotor(*devices["motor_z"])
-        self.motor_x_spec = self.motor_spec["motor_x"]
-        self.motor_y_spec = self.motor_spec["motor_y"]
-        self.motor_z_spec = self.motor_spec["motor_z"]
-        self.nx = 12
-        self.ny = 5
+        # initialize motors
+        with open(motor_spec, encoding="utf8") as f:
+            motor_conf = json.load(f)
+        devices = motor_conf["devices"]
+        self.motors["x"] = BoundedStepperMotor(*devices["motor_x"]["pins"])
+        self.motors["y"] = BoundedStepperMotor(*devices["motor_y"]["pins"])
+        self.motors["z"] = StepperMotor(*devices["motor_z"]["pins"])
+        self.specs["x"] = motor_conf["motor_x"]
+        self.specs["y"] = motor_conf["motor_y"]
+        self.specs["z"] = motor_conf["motor_z"]
+        self.dx = 0.1  # 0.1m per step on x
+        self.dy = 0.2  # 0.2m per step on y
+        self.dz = 0.01  # 0.01m per step on z
+        self.ny = int(devices["motor_x"]["length"] / self.dy)
         self.reset()
 
-    def go(self, direction, nsteps, reverse=False, speed=1):
-        motor = self.motor_x if direction == "x" else self.motor_y
-        motor_spec = self.motor_x_spec if direction == "x" else self.motor_y_spec
-        nn = self.nx if direction == "x" else self.ny
-        freq = 1000 * speed
-        dc = 0.5
-        clockwise = motor_spec["clockwise"]
-        if reverse:
+    def drive_motor(self, motor, length, forward=True, speed_mul=1.0):
+        speed = self.specs[motor]["speed"] * speed_mul  # increase speed
+        freq = self.specs[motor]["freq"] * speed_mul  # by increase freq
+        clockwise = self.specs[motor]["clockwise"]
+        if not forward:
             clockwise = not clockwise
-        duration = motor_spec["time"] * nsteps / nn * motor_spec["freq"] / freq
-        motor.drive(duration, freq=freq, dc=dc, clockwise=clockwise)
+        duration = length / speed
+        motor.drive(duration, freq=freq, dc=0.5, clockwise=clockwise)
+
+    def go(self, direction, nsteps, reverse=False, speed_mul=1.0):
+        if direction == "x":
+            self.drive_motor("x", self.dx * nsteps, not reverse, speed_mul)
+        elif direction == "y":
+            self.drive_motor("y", self.dy * nsteps, not reverse, speed_mul)
+        else:
+            self.drive_motor("z", self.dz * nsteps, not reverse, speed_mul)
 
     def reset(self):
-        self.motor_x.hold()
-        self.motor_y.hold()
-        self.motor_z.hold()
+        self.motors["x"].hold()
+        self.motors["y"].hold()
+        self.motors["z"].hold()
+        # Go to left bottom corner and ready cleaner
+        self.go("x", 100, reverse=True)
+        self.go("y", 100, reverse=True)
+        self.go("z", 5)
 
     def manual(self):
-        self.motor_x.release()
-        self.motor_y.release()
-        self.motor_z.release()
+        self.motors["x"].release()
+        self.motors["y"].release()
+        self.motors["z"].release()
+        self.go("z", 5, reverse=True)
 
-    def mode1(self):
-        self.go("x", 1, False)
+    def go_right(self):
+        self.go("x", 1)
 
-    def mode2(self):
-        self.go("x", 1, True)
+    def go_left(self):
+        self.go("x", 1, reverse=True)
 
-    def mode3(self):
-        self.go("y", 1, False)
+    def go_up(self):
+        self.go("y", 1)
 
-    def mode4(self):
-        self.go("y", 1, True)
+    def go_down(self):
+        self.go("y", 1, reverse=True)
 
-    def mode5(self):
+    def full_clean(self):
+        self.reset()
         for _ in range(self.ny):
-            self.go("x", self.nx, False)
-            self.go("x", self.nx, True)
-            self.go("y", 1, False)
-        self.go("x", self.nx, False)
-        self.go("x", self.nx, True)
-        self.go("y", self.ny, True)
+            self.go("x", 100)
+            self.go("x", 100, reverse=True)
+            self.go("y", 1)
+        self.go("x", 100)
+        self.go("x", 100, reverse=True)
+        self.go("y", 100, reverse=True)
 
-    def mode6(self):
-        # TODO: plugin voice control model
-        pass
+    def voice_control(self):
+        try:
+            while True:
+                self.buttons[8].setIcon(
+                    QIcon(QApplication.style().standardIcon(
+                        QStyle.SP_MediaPause)))
+                data = audio_utils.record_voice(self.voice_device[0],
+                                                self.voice_duration,
+                                                self.voice_device[2],
+                                                downsample=False)
+                self.buttons[8].setIcon(
+                    QIcon(QApplication.style().standardIcon(
+                        QStyle.SP_MediaPlay)))
+                result = self.model.predict(data, self.voice_device[2])
+                print("Probability:")
+                for k, v in result["details"].items():
+                    print(f"  {k}: {v*100:.3f}%")
+                print(f"Voice command: {result['command']}")
+                cmd = result["command"]
+                if result["details"][cmd] <= 0.8:
+                    continue
+                if cmd == "__noise__":
+                    continue
+                elif cmd == "go":
+                    self.full_clean()
+                elif cmd == "stop":
+                    break
+                elif cmd == "up":
+                    self.go_up()
+                elif cmd == "down":
+                    self.go_down()
+                elif cmd == "left":
+                    self.go_left()
+                elif cmd == "right":
+                    self.go_right()
+        except KeyboardInterrupt:
+            return
 
 
 if __name__ == "__main__":
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     GPIO.setmode(GPIO.BCM)
     app = QApplication(sys.argv)
-    window = MainWindow(os.path.join(SCRIPT_DIR, "motor_spec.json"))
+    window = MainWindow(os.path.join(SCRIPT_DIR, "motor_spec.json"),
+                        os.path.join(SCRIPT_DIR, "model_spec.json"))
     window.show()
     ret_code = app.exec_()
     GPIO.cleanup()
