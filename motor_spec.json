@@ -32,16 +32,16 @@
   "motor_x": {
     "clockwise": true,
     "freq": 1000,
-    "speed": 0.07318151570596898
+    "speed": 0.10318151570596898
   },
   "motor_y": {
     "clockwise": false,
     "freq": 1000,
-    "speed": 0.08038319798998698
+    "speed": 0.10318319798998698
   },
   "motor_z": {
     "clockwise": true,
     "freq": 4000,
-    "speed": 0.03172592022210098
+    "speed": 0.05172592022210098
   }
 }
