@@ -1,5 +1,5 @@
 {
-  "fn": "model.keras",
+  "fn": "model_with_noise.keras",
   "sr": 16000,
   "duration": 1.0,
   "feature": "mfcc",
