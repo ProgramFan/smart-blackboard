@@ -17,16 +17,18 @@ import audio_utils
 import sys
 import os
 import json
+import argparse
 
 
 class MainWindow(QMainWindow):
     """The main window"""
 
-    def __init__(self, motor_spec, model_spec):
-        super(MainWindow).__init__()
+    def __init__(self, motor_spec, model_spec, fullscreen=True):
+        super(MainWindow, self).__init__()
 
         self.setWindowTitle("智能黑板擦控制程序")
-        self.showFullScreen()
+        if fullscreen:
+            self.showFullScreen()
 
         widget = QWidget()
         layout = QGridLayout()
@@ -100,6 +102,8 @@ class MainWindow(QMainWindow):
         with open(motor_spec, encoding="utf8") as f:
             motor_conf = json.load(f)
         devices = motor_conf["devices"]
+        self.motors = {}
+        self.specs = {}
         self.motors["x"] = BoundedStepperMotor(*devices["motor_x"]["pins"])
         self.motors["y"] = BoundedStepperMotor(*devices["motor_y"]["pins"])
         self.motors["z"] = StepperMotor(*devices["motor_z"]["pins"])
@@ -110,7 +114,7 @@ class MainWindow(QMainWindow):
         self.dy = 0.2  # 0.2m per step on y
         self.dz = 0.01  # 0.01m per step on z
         self.ny = int(devices["motor_x"]["length"] / self.dy)
-        self.reset()
+        self.manual()
 
     def drive_motor(self, motor, length, forward=True, speed_mul=1.0):
         speed = self.specs[motor]["speed"] * speed_mul  # increase speed
@@ -119,7 +123,7 @@ class MainWindow(QMainWindow):
         if not forward:
             clockwise = not clockwise
         duration = length / speed
-        motor.drive(duration, freq=freq, dc=0.5, clockwise=clockwise)
+        self.motors[motor].drive(duration, freq=freq, dc=0.5, clockwise=clockwise)
 
     def go(self, direction, nsteps, reverse=False, speed_mul=1.0):
         if direction == "x":
@@ -136,13 +140,15 @@ class MainWindow(QMainWindow):
         # Go to left bottom corner and ready cleaner
         self.go("x", 100, reverse=True)
         self.go("y", 100, reverse=True)
-        self.go("z", 5)
+        self.go("z", 2)
+        self.drive_motor("x", 0.02)
+        self.drive_motor("y", 0.02)
 
     def manual(self):
+        self.go("z", 2, reverse=True)
         self.motors["x"].release()
         self.motors["y"].release()
         self.motors["z"].release()
-        self.go("z", 5, reverse=True)
 
     def go_right(self):
         self.go("x", 1)
@@ -204,14 +210,23 @@ class MainWindow(QMainWindow):
         except KeyboardInterrupt:
             return
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fullscreen",
+                        action="store_true",
+                        help="start app in fullscreen mode")
+    args = parser.parse_args()
 
-if __name__ == "__main__":
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     GPIO.setmode(GPIO.BCM)
     app = QApplication(sys.argv)
     window = MainWindow(os.path.join(SCRIPT_DIR, "motor_spec.json"),
-                        os.path.join(SCRIPT_DIR, "model_spec.json"))
+                        os.path.join(SCRIPT_DIR, "model_spec.json"),
+                        args.fullscreen)
     window.show()
     ret_code = app.exec_()
     GPIO.cleanup()
     sys.exit(ret_code)
+
+if __name__ == "__main__":
+    main()
