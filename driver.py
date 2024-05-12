@@ -35,23 +35,23 @@ class StepperMotor(object):
             GPIO.setup(p, GPIO.OUT, initial=GPIO.LOW)
 
     def calibrate(self, freq, length):
-        print(f"= Calibrating with PWM freq {freq}Hz for length {length}m =")
-        print("Check direction:")
+        print(f">> Calibrating with PWM freq {freq}Hz for length {length}m <<")
+        print(">>> Check direction:")
         self.release()
-        input("Place the object to the center and press enter")
+        input(">>> Place the object to the center and press enter")
         self.hold()
         self.forward(2, freq=freq)
-        ans = input("Is the object going forward (1) or backward (0)?")
+        ans = input(">>> Is the object going forward (1) or backward (0)? ")
         clockwise = int(ans) == 1
         self.release()
-        input("Place the object to the forward start and press enter.")
+        input(">>> Place the object to the forward start and press enter.")
         self.hold()
         GPIO.output(self.pins[0], GPIO.HIGH)
         GPIO.output(self.pins[1], GPIO.HIGH if clockwise else GPIO.LOW)
         p = GPIO.PWM(self.pins[2], freq)
         p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
         t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
-        input("Press enter when the object reaches the other end")
+        input(">>> Press enter when the object reaches the other end")
         t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
         p.stop()
         return {
@@ -99,10 +99,10 @@ class BoundedStepperMotor(object):
         self.reset()
 
     def calibrate(self, freq, length):
-        print(f"= Calibrating with PWM freq {freq}Hz for length {length}m =")
-        print("Check direction:")
+        print(f">> Calibrating with PWM freq {freq}Hz for length {length}m <<")
+        print(">>> Check direction:")
         self.release()
-        input("Place the object to the center and press enter")
+        input(">>> Place the object to the center and press enter")
         self.hold()
         GPIO.output(self.pins[0], GPIO.HIGH)
         GPIO.output(self.pins[1], GPIO.HIGH)
@@ -111,8 +111,8 @@ class BoundedStepperMotor(object):
         GPIO.add_event_detect(k0, GPIO.RISING)
         GPIO.add_event_detect(k1, GPIO.RISING)
         p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
-        input("Press the collision detection button on the correct end")
-        for _ in range(2 * 100):
+        print(">>> Press the collision detector on the correct end within 5 secs")
+        for _ in range(5 * 100):
             time.sleep(0.01)
             k0_pressed = GPIO.event_detected(k0)
             k1_pressed = GPIO.event_detected(k1)
@@ -121,18 +121,20 @@ class BoundedStepperMotor(object):
         p.stop()
         GPIO.remove_event_detect(k0)
         GPIO.remove_event_detect(k1)
-        ans = input("Is the object going forward (1) or backward (0)?")
+        ans = input(">>> Is the object going forward (1) or backward (0)? ")
         clockwise = int(ans) == 1
         shall_swap = False
         if (clockwise and k0_pressed) or (not clockwise and k1_pressed):
             shall_swap = True
         if shall_swap:
+            print(f">>> swapping {self.bounds}")
             self.bounds[0], self.bounds[1] = self.bounds[1], self.bounds[0]
+            print(f">>> swapped as {self.bounds}")
         # a very large duration to ensure reach the boundary.
-        print("The motor will go backward to the forward start.")
-        trial_duration = 3600  # an hour
+        print(">>> The motor will go backward to the forward start.")
+        trial_duration = 120  # an hour
         self.drive(trial_duration, freq, 0.5, not clockwise)
-        print("The motor will perform a full move forward.")
+        print(">>> The motor will perform a full move forward.")
         t0 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
         self.drive(trial_duration, freq, 0.5, clockwise)
         t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
@@ -208,4 +210,4 @@ def test2():
 
 
 if __name__ == "__main__":
-    test2()
+    test()
