@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QStyle
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize
 from RPi import GPIO
-from driver import BoundedStepperMotor
+from driver import BoundedStepperMotor, StepperMotor
 
 import sys
 import os
@@ -83,12 +83,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
 
         with open(motor_spec, encoding="utf8") as f:
-            self.motor_spec = json.load(f)
+            self.config = json.load(f)
 
-        self.motor_x = BoundedStepperMotor(5, 3, 4, 6, 7)
+        devices = self.config.get("devices", {})
+        self.motor_x = BoundedStepperMotor(*devices["motor_x"])
+        self.motor_y = BoundedStepperMotor(*devices["motor_y"])
+        self.motor_z = StepperMotor(*devices["motor_z"])
         self.motor_x_spec = self.motor_spec["motor_x"]
-        self.motor_y = BoundedStepperMotor(12, 10, 11, 8, 9)
         self.motor_y_spec = self.motor_spec["motor_y"]
+        self.motor_z_spec = self.motor_spec["motor_z"]
         self.nx = 12
         self.ny = 5
         self.reset()
@@ -108,10 +111,12 @@ class MainWindow(QMainWindow):
     def reset(self):
         self.motor_x.hold()
         self.motor_y.hold()
+        self.motor_z.hold()
 
     def manual(self):
         self.motor_x.release()
         self.motor_y.release()
+        self.motor_z.release()
 
     def mode1(self):
         self.go("x", 1, False)
@@ -135,6 +140,7 @@ class MainWindow(QMainWindow):
         self.go("y", self.ny, True)
 
     def mode6(self):
+        # TODO: plugin voice control model
         pass
 
 

@@ -24,7 +24,7 @@ class GpioManager(object):
 class StepperMotor(object):
     """A simple stepper motor with 3 control signals."""
 
-    def __init__(self, pin_en, pin_dir, pin_stp):
+    def __init__(self, pin_en, pin_dir, pin_stp, freq=1000, dc=0.5):
         self.pins = [pin_en, pin_dir, pin_stp]
         for p in self.pins:
             GPIO.setup(p, GPIO.OUT, initial=GPIO.LOW)
@@ -38,9 +38,12 @@ class StepperMotor(object):
         p.stop()
 
     def calibrate(self, freq):
+        self.release()
+        input("Please set the object to middle")
+        self.hold()
         print("Check direction:")
         input("Please set the object to the middle and press enter")
-        self.forward(1, freq=500)
+        self.forward(2, freq=freq)
         ans = input("Is the object going forward (1) or backward (0)?")
         direction = int(ans) == 1
         self.release()
@@ -54,7 +57,7 @@ class StepperMotor(object):
         input("Press enter when the object reaches the other end")
         t1 = time.clock_gettime_ns(time.CLOCK_MONOTONIC) * 1e-9
         p.stop()
-        return {"direction": direction, "freq": freq, "time": t1 - t0}
+        return {"clockwise": direction, "freq": freq, "time": t1 - t0}
 
     def forward(self, duration, freq=500, dc=0.50):
         self.drive(duration, freq, dc, True)
@@ -130,7 +133,27 @@ class BoundedStepperMotor(object):
 def test():
     with GpioManager() as _:
         motor_x = BoundedStepperMotor(5, 3, 4, 6, 7, freq=1000)
+        motor_x.release()
+        input("Put the motor to left")
+        motor_x.hold()
         print(motor_x.calibrate())
+        input("Press enter to start")
+        for _ in range(4):
+            print("Goes forward")
+            motor_x.forward(10)
+            print("Stopped")
+            print("Goes backward")
+            motor_x.backward(10)
+            print("Stopped")
+
+def test2():
+    with GpioManager() as _:
+        motor_x = StepperMotor(5, 3, 4)
+        motor_x.release()
+        input("Put the motor to left")
+        motor_x.hold()
+        print(motor_x.calibrate(1000))
+        input("Press enter to start")
         for _ in range(4):
             print("Goes forward")
             motor_x.forward(5)
@@ -141,4 +164,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    test2()

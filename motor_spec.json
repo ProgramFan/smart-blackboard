@@ -1,4 +1,9 @@
 {
+  "devices": {
+    "motor_x": [5, 3, 4, 6, 7],
+    "motor_y": [10, 8, 9, 11, 12],
+    "motor_z": [16, 14, 15]
+  },
   "motor_x": {
     "direction": true,
     "freq": 500,
