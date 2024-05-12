@@ -161,7 +161,7 @@ class BoundedStepperMotor(object):
         p = GPIO.PWM(self.pins[2], real_freq)
         d = self.bounds[1] if clockwise else self.bounds[0]
         p.start(real_dc * 100)  # GPIO.PWM use dc from 0 to 100
-        GPIO.wait_for_edge(d, GPIO.RISING, timeout=duration * 1000)
+        GPIO.wait_for_edge(d, GPIO.RISING, timeout=int(duration * 1000))
         p.stop()
 
     def forward(self, duration=3600, freq=None, dc=None):
