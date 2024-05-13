@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
     """The main window"""
 
     def __init__(self, motor_spec, model_spec, fullscreen=True):
-        super(MainWindow, self).__init__()
+        super().__init__()
 
         self.setWindowTitle("智能黑板擦控制程序")
         if fullscreen:
@@ -65,10 +65,10 @@ class MainWindow(QMainWindow):
         ]
 
         font = QFont()
-        font.setPixelSize(48)
+        font.setPixelSize(60)
         for button in self.buttons:
             button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            button.setIconSize(QSize(48, 48))
+            button.setIconSize(QSize(60, 60))
             button.setFont(font)
 
         positions = [(i, j) for i in range(3) for j in range(3)]
@@ -122,7 +122,7 @@ class MainWindow(QMainWindow):
         self.specs["y"] = motor_conf["motor_y"]
         self.specs["z"] = motor_conf["motor_z"]
         self.dx = 0.1  # 0.1m per step on x
-        self.dy = 0.2  # 0.2m per step on y
+        self.dy = 0.1  # 0.2m per step on y
         self.dz = 0.01  # 0.01m per step on z
         self.ny = int(devices["motor_x"]["length"] / self.dy)
         self.manual()
@@ -134,7 +134,10 @@ class MainWindow(QMainWindow):
         if not forward:
             clockwise = not clockwise
         duration = length / speed
-        self.motors[motor].drive(duration, freq=freq, dc=0.8, clockwise=clockwise)
+        self.motors[motor].drive(duration,
+                                 freq=freq,
+                                 dc=0.8,
+                                 clockwise=clockwise)
 
     def go(self, direction, nsteps, reverse=False, speed_mul=1.0):
         if direction == "x":
@@ -228,6 +231,7 @@ class MainWindow(QMainWindow):
         except KeyboardInterrupt:
             return
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fullscreen",
@@ -245,6 +249,7 @@ def main():
     ret_code = app.exec_()
     GPIO.cleanup()
     sys.exit(ret_code)
+
 
 if __name__ == "__main__":
     main()

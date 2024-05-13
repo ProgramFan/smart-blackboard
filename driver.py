@@ -111,7 +111,7 @@ class BoundedStepperMotor(object):
         GPIO.add_event_detect(k0, GPIO.RISING)
         GPIO.add_event_detect(k1, GPIO.RISING)
         p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
-        print(">>> Press the collision detector on the correct end within 5 secs")
+        print(">>> Press the correct collision detector within 5 secs")
         for _ in range(5 * 100):
             time.sleep(0.01)
             k0_pressed = GPIO.event_detected(k0)
@@ -122,16 +122,15 @@ class BoundedStepperMotor(object):
         GPIO.remove_event_detect(k0)
         GPIO.remove_event_detect(k1)
         ans = input(">>> Is the object going forward (1) or backward (0)? ")
-        clockwise = int(ans) == 1 # whether motor goes clockwise if we move forward
-        # self.drive expect that if go clockwise, k1 shall be pressed, swap if we
-        # detect something different.
+        clockwise = int(ans) == 1  # shall motor go clockwise if move forward
+        # self.drive expect that if go clockwise, k1 shall be pressed, swap if
+        # we detect something different.
         shall_swap = False
         if k0_pressed:
             shall_swap = True
         if shall_swap:
-            print(f">>> swapping {self.bounds}")
             self.bounds[0], self.bounds[1] = self.bounds[1], self.bounds[0]
-            print(f">>> swapped as {self.bounds}")
+            print(f">>> swapped bounds as {self.bounds}")
         # a very large duration to ensure reach the boundary.
         print(">>> The motor will go backward to the forward start.")
         trial_duration = 120  # an hour
@@ -161,22 +160,25 @@ class BoundedStepperMotor(object):
         p = GPIO.PWM(self.pins[2], real_freq)
         d = self.bounds[1] if clockwise else self.bounds[0]
         GPIO.add_event_detect(d, GPIO.RISING)
-        p.start(real_dc * 100)  # GPIO.PWM use dc from 0 to 100
+        p.start(real_dc * 1000)  # GPIO.PWM use dc from 0 to 100
         collision_detected = False
         for _ in range(int(duration * 100)):
-            time.sleep(0.01)
+            time.sleep(0.001)
             if GPIO.event_detected(d):
                 collision_detected = True
                 break
         p.stop()
         GPIO.remove_event_detect(d)
         if collision_detected:
-            # go backward a little bit to release button
+            # go backward a little bit to release collision detector
+            time.sleep(0.1)  # wait some time to avoid sudden acceleration.
             GPIO.output(self.pins[0], GPIO.HIGH)
             GPIO.output(self.pins[1], GPIO.LOW if clockwise else GPIO.HIGH)
             p = GPIO.PWM(self.pins[2], real_freq)
             p.start(real_dc * 100)
-            time.sleep(0.1)
+            # In our exp, run 0.1s with 1000hz goes 1cm. we want to move 0.05cm,
+            # so the sleep time will be 0.1/2 * 1000/freq = 50 / freq
+            time.sleep(50 / freq)
             p.stop()
 
     def forward(self, duration=3600, freq=None, dc=None):
