@@ -112,6 +112,7 @@ class BoundedStepperMotor(object):
         GPIO.add_event_detect(k1, GPIO.RISING)
         p.start(0.5 * 100)  # GPIO.PWM use dc from 0 to 100
         print(">>> Press the correct collision detector within 5 secs")
+        k0_pressed, k1_pressed = False, False
         for _ in range(5 * 100):
             time.sleep(0.01)
             k0_pressed = GPIO.event_detected(k0)
@@ -125,9 +126,7 @@ class BoundedStepperMotor(object):
         clockwise = int(ans) == 1  # shall motor go clockwise if move forward
         # self.drive expect that if go clockwise, k1 shall be pressed, swap if
         # we detect something different.
-        shall_swap = False
-        if k0_pressed:
-            shall_swap = True
+        shall_swap = k0_pressed
         if shall_swap:
             self.bounds[0], self.bounds[1] = self.bounds[1], self.bounds[0]
             print(f">>> swapped bounds as {self.bounds}")
