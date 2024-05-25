@@ -2,18 +2,18 @@
   "devices": {
     "motor_x": {
       "pins": [ 3, 4, 5, 6, 7 ],
-      "length": 0.46
+      "length": 0.60
     },
     "motor_y": {
-      "pins": [ 10, 11, 12, 8, 9 ],
-      "length": 0.51
+      "pins": [ 10, 11, 12, 9, 8 ],
+      "length": 0.60
     },
     "motor_z": {
       "pins": [ 14, 15, 16 ],
       "length": 0.05
     },
     "pump": {
-      "pin": 17
+      "pin": 18
     }
   },
   "motor_x": {

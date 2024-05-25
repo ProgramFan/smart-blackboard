@@ -212,7 +212,7 @@ class Pump(object):
         GPIO.output(self.pin, GPIO.LOW)
 
 
-def test():
+def testx():
     with GpioManager() as _:
         motor_x = BoundedStepperMotor(3, 4, 5, 6, 7, freq=1000)
         print(motor_x.calibrate(1000, 0.5))
@@ -222,14 +222,29 @@ def test():
         input("Press enter to start")
         for _ in range(4):
             print("Goes forward")
-            motor_x.forward(100)
+            motor_x.forward(10)
             print("Stopped")
             print("Goes backward")
-            motor_x.backward(100)
+            motor_x.backward(10)
             print("Stopped")
 
+def testy():
+    with GpioManager() as _:
+        motor_x = BoundedStepperMotor(10, 11, 12, 8, 9, freq=1000)
+        print(motor_x.calibrate(1000, 0.5))
+        motor_x.release()
+        input("Put the motor to left")
+        motor_x.hold()
+        input("Press enter to start")
+        for _ in range(4):
+            print("Goes forward")
+            motor_x.forward(10)
+            print("Stopped")
+            print("Goes backward")
+            motor_x.backward(10)
+            print("Stopped")
 
-def test2():
+def testz():
     with GpioManager() as _:
         motor_x = StepperMotor(14, 15, 16, freq=4000)
         print(motor_x.calibrate(4000, 0.15))
@@ -247,4 +262,14 @@ def test2():
 
 
 if __name__ == "__main__":
-    test()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("MOTOR", choices=("x", "y", "z"),
+                        help="Which motor to test")
+    args = parser.parse_args()
+    if args.MOTOR == "x":
+        testx()
+    elif args.MOTOR == "y":
+        testy()
+    elif args.MOTOR == "z":
+        testz()

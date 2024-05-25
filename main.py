@@ -123,7 +123,7 @@ class MainWindow(QMainWindow):
         self.specs["y"] = motor_conf["motor_y"]
         self.specs["z"] = motor_conf["motor_z"]
         self.dx = 0.1  # 0.1m per step on x
-        self.dy = 0.1  # 0.2m per step on y
+        self.dy = 0.1  # 0.1m per step on y
         self.dz = 0.01  # 0.01m per step on z
         self.ny = int(devices["motor_x"]["length"] / self.dy)
         self.manual()
@@ -137,7 +137,7 @@ class MainWindow(QMainWindow):
         duration = length / speed
         self.motors[motor].drive(duration,
                                  freq=freq,
-                                 dc=0.8,
+                                 dc=0.5,
                                  clockwise=clockwise)
 
     def go(self, direction, nsteps, reverse=False, speed_mul=1.0):
@@ -179,13 +179,15 @@ class MainWindow(QMainWindow):
         self.reset()
         for _ in range(self.ny):
             self.pump.on()
-            self.go("x", 100)
+            time.sleep(0.5)
             self.pump.off()
+            self.go("x", 100)
             self.go("x", 100, reverse=True)
             self.go("y", 1)
         self.pump.on()
-        self.go("x", 100)
+        time.sleep(0.5)
         self.pump.off()
+        self.go("x", 100)
         self.go("x", 100, reverse=True)
         self.go("y", 100, reverse=True)
 
