@@ -10,7 +10,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize
 from RPi import GPIO
 
-from driver import BoundedStepperMotor, StepperMotor
+from driver import BoundedStepperMotor, StepperMotor, Pump
 from voice_model import VoiceCmdModel
 import audio_utils
 
@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
         with open(motor_spec, encoding="utf8") as f:
             motor_conf = json.load(f)
         devices = motor_conf["devices"]
+        self.pump = Pump(devices["pump"]["pin"])
         self.motors = {}
         self.specs = {}
         self.motors["x"] = BoundedStepperMotor(*devices["motor_x"]["pins"])
@@ -177,10 +178,14 @@ class MainWindow(QMainWindow):
     def full_clean(self):
         self.reset()
         for _ in range(self.ny):
+            self.pump.on()
             self.go("x", 100)
+            self.pump.off()
             self.go("x", 100, reverse=True)
             self.go("y", 1)
+        self.pump.on()
         self.go("x", 100)
+        self.pump.off()
         self.go("x", 100, reverse=True)
         self.go("y", 100, reverse=True)
 

@@ -159,10 +159,10 @@ class BoundedStepperMotor(object):
         p = GPIO.PWM(self.pins[2], real_freq)
         d = self.bounds[1] if clockwise else self.bounds[0]
         GPIO.add_event_detect(d, GPIO.RISING)
-        p.start(real_dc * 1000)  # GPIO.PWM use dc from 0 to 100
+        p.start(real_dc * 100)  # GPIO.PWM use dc from 0 to 100
         collision_detected = False
         for _ in range(int(duration * 100)):
-            time.sleep(0.001)
+            time.sleep(0.01)
             if GPIO.event_detected(d):
                 collision_detected = True
                 break
@@ -177,7 +177,7 @@ class BoundedStepperMotor(object):
             p.start(real_dc * 100)
             # In our exp, run 0.1s with 1000hz goes 1cm. we want to move 0.05cm,
             # so the sleep time will be 0.1/2 * 1000/freq = 50 / freq
-            time.sleep(50 / freq)
+            time.sleep(50 / real_freq)
             p.stop()
 
     def forward(self, duration=3600, freq=None, dc=None):
@@ -192,6 +192,25 @@ class BoundedStepperMotor(object):
     def hold(self):
         GPIO.output(self.pins[0], GPIO.HIGH)
 
+class Pump(object):
+    def __init__(self, pin):
+        self.pin = pin
+        self.reset()
+
+    def reset(self):
+        GPIO.setup(self.pin, GPIO.OUT, initial=GPIO.LOW)
+
+    def on(self):
+        GPIO.output(self.pin, GPIO.HIGH)
+
+    def off(self):
+        GPIO.output(self.pin, GPIO.LOW)
+
+    def drive(self, duration):
+        GPIO.output(self.pin, GPIO.HIGH)
+        time.sleep(duration)
+        GPIO.output(self.pin, GPIO.LOW)
+
 
 def test():
     with GpioManager() as _:
@@ -203,10 +222,10 @@ def test():
         input("Press enter to start")
         for _ in range(4):
             print("Goes forward")
-            motor_x.forward(10)
+            motor_x.forward(100)
             print("Stopped")
             print("Goes backward")
-            motor_x.backward(10)
+            motor_x.backward(100)
             print("Stopped")
 
 
